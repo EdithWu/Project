@@ -1,0 +1,133 @@
+---
+output: pdf_document
+---
+#Effect of Transmission Type on MPG of Cars
+##Executive Summary
+In this report data collected by Moto Trends is explored and analyzed in order to find out the relationship between a set of variables and miles per gallon (MPG) (outcome) of automobiles. In particlular, the following two issues will be addressed:
+
+* Is an automatic or manual transmission better for MPG?
+* Quantify the MPG difference between automatic and manual transmissions.
+
+##Summary of data
+The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel
+consumption and 10 aspects of automobile design and performance for 32 automobiles (1973-74 models). The qualitative variables such as number of cylinders, gears and carburetors were converted to factors. The description of variabless is attached in the appendix.
+
+```{r, setoptions, echo = FALSE}
+data(mtcars)
+library(knitr)
+opts_chunk$set(echo = FALSE)
+opts_chunk$set(fig.width = 8)
+opts_chunk$set(fig.height = 6)
+```
+
+```{r}
+# convert qualitative data to factors
+mtcars$cyl <- factor(mtcars$cyl)
+mtcars$vs <- factor(mtcars$vs)
+mtcars$am <- factor(mtcars$am, labels = c("Automatic", "Manual"))
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+```
+
+## Exploratory analysis
+First, a boxplot (Figure 1) was created to show the difference between automatic and manual in terms of MPG, it is clear that manual transmission produces more MPG. Next, a pairwise graph (Figure 2) was created to see any other variables may be of interest. There is a linear relationship between MPG and each of cyl, disp, hp, drat, wt, qsec, vs, am. And the positive correlations between variables were noted (qsec = 0.419, vs = 0.664, am = 0.600, gear = 0.480) from Figure 3. Then a linear model was fit on all variables to determine which variables should be used in the final models.  The summary of this model is given in Figure 4, the lowest p values were taken (i.e. wt = 0.063, am = 0.234, qsec = 0.274) due to their high significance in predicting MPG.
+
+```{r, echo = FALSE}
+# model using all data as predictors
+All_model = lm(mpg ~ ., data = mtcars)
+```
+## Model
+The boxplot, covariance table and the pairwise graph make the following variables significant : qsec, vs, am, wt and gear. Next a stepwise model was used to select the most significant regressors, which is done by using the step function to create multiple regression models with different variables and output the best regressors. Table 1 shows that cyl, hp, wt and am are the most significant predictors in determining the MPG. This selected model lm(formula = mpg ~ cyl + hp + wt + am, data = mtcars) yields an R squared value of 87% (Table 2) meaning that very high percentage of variation is explained by the regression model. Next, comparing the selected model with the initial model (initial_model <- lm(mpg ~ am, data = mtcars)), a small p-value of 1.688e-08 was obtained (Table 3), which suggests that the added predictors are significant to improving the model's accuracy. 
+
+```{r}
+# step wise selection process
+selected_model <- step(lm(mpg ~ ., data = mtcars), trace = 0)
+```
+
+```{r, echo = FALSE}
+# compare basic model to selection model
+initial_model <- lm(mpg ~ am, data = mtcars)
+compare <- anova(selected_model, initial_model)
+```
+
+## Diagnostics
+The residuals from the slected model are plotted below.
+
+Figure 6
+```{r, fig.cap = "Figure 6"}
+par(mfrow=c(2, 2))
+plot(selected_model)
+```
+
+* The Residuals vs Fitted plot shows no pattern between the residuals and fitted values indicating that this regression model is well fit.  
+* The QQ plot shows that the points line up as expected meaning that the distribtion is normal and our model predictions are accurate.  
+* The Scale-Location plot and the Residuals vs Leverage plots show that the points are in a group not too far from the center indicating no point had too much leverage.
+
+## Statistical Inference
+A Two Sample t-test was conducted between the different transmission types, which rejects the null hypothesis that transmission types don't have an effect on the MPG with the p-value of 0.001374 (<0.05) (Figure 5) and difference in  means both show that manual transmission has significantly more MPG than automatic.
+```{r}
+t_test <- t.test(mpg ~ am, data = mtcars)
+```
+
+## Conclusions
+The transmission type of a car has a significant effect on its fuel efficiency. According to the selected model, manual transmission, on average, has 1.81 MPG more than automatics. According to the boxplot, manual transmission has ~ 6 MPG more than automatics.
+
+## Appendix
+Description of variables  
+- mpg \ Miles/(US) gallon  
+- cyl  \  Number of cylinders  
+- disp \ Displacement (cu.in.)  
+- hp   \  Gross horsepower  
+- drat \ Rear axle ratio  
+- wt	 \  Weight (lb/1000)  
+- qsec \  1/4 mile time  
+- vs  \  \ V or ordinary engine  
+- am	\  Transmission (0 = automatic, 1 = manual)  
+- gear \ Number of forward gears  
+- carb\  Number of carburetors  
+
+Figure 1
+```{r, fig.cap = "Figure 1", fig.width = 5, fig.height = 4}
+fit1 <- lm(mpg ~ am, data = mtcars)
+boxplot(mpg ~ am, data = mtcars,
+        xlab = "Transmission type",
+        ylab = "Miles per gallon",
+        main = "MPG vs Transmission",
+        col = c("salmon", "blue"), 
+        names = c("Automatic", "Manual")
+        )
+```
+
+Figure 2
+```{r, fig.cap = "Figure 2", fig.width = 8}
+pairs(mtcars, panel = panel.smooth, main = "Pairwise plot of mtcars data")
+```
+
+```{r, efig.cap = "Table 1", echo = TRUE}
+head(cov2cor(cov(sapply(mtcars, as.numeric))), 1)
+```
+Figure 3
+
+
+```{r,echo = TRUE}
+All_model <- lm(mpg ~ ., data = mtcars)
+All_model$coef
+``` 
+Figure 4
+
+```{r, results="asis", echo = TRUE}
+selected_model <- step(lm(mpg ~ ., data = mtcars), trace = 0)
+kable(summary(selected_model)$coef, digits=4, caption="selected Model")
+kable(summary(selected_model)$r.squared, digits=4, caption="R squared")
+```
+```{r, results="asis", echo = TRUE}
+initial_model <- lm(mpg ~ am, data = mtcars)
+compare <- anova(initial_model, selected_model)
+kable(compare$Pr[2],digits=20, caption="P-Value")
+```
+
+```{r, echo = TRUE}
+t_test <- t.test(mpg ~ am, data = mtcars)
+t_test
+```
+Figure 5
